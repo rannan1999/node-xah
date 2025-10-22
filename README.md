@@ -5,7 +5,8 @@
 ```
 curl -s https://raw.githubusercontent.com/vevc/node-xah/refs/heads/main/install.sh |
 env DOMAIN=example.com PORT=27796 bash
-
+```
+```
 curl -s https://raw.githubusercontent.com/rannan1999/node-xah/refs/heads/main/install.sh | bash
 ```
 
