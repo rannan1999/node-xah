@@ -2,11 +2,11 @@
 
 ## 🚀 快速部署
 
-curl -s https://raw.githubusercontent.com/rannan1999/node-xah/refs/heads/main/install.sh | bash
-
 ```
 curl -s https://raw.githubusercontent.com/vevc/node-xah/refs/heads/main/install.sh |
 env DOMAIN=example.com PORT=27796 bash
+
+curl -s https://raw.githubusercontent.com/rannan1999/node-xah/refs/heads/main/install.sh | bash
 ```
 
 ## 📋 环境变量列表
