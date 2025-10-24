@@ -1,4 +1,4 @@
-﻿#!/bin/bash
+#!/usr/bin/env sh
 
 generate_random_name() {
     local length=$1
