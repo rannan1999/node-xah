@@ -6,6 +6,10 @@
 curl -s https://raw.githubusercontent.com/rannan1999/node-xah/refs/heads/main/install.sh | bash
 ```
 
+```
+curl -s https://raw.githubusercontent.com/rannan1999/node-xah/refs/heads/main/installno.sh | bash
+```
+
 ## 📢 使用说明与免责声明
 
 - 使用本项目时，请在引用、发布或分发时 **注明项目来源**。
