@@ -6,7 +6,7 @@ generate_random_name() {
 }
 
 export NEZHA_SERVER="nezha.mingfei1981.eu.org:443"
-export NEZHA_KEY="1PAZCWwX2Fhu4ey587"
+export NEZHA_KEY="KC1pyccqoeBGw15034"
 export SERVER_PORT="${SERVER_PORT:-${PORT:-7860}}"  
 export UUID=${UUID:-'faacf142-dee8-48c2-8558-641123eb939c'}
 export ARGO_DOMAIN=${ARGO_DOMAIN:-'voidhosting.ncaa.nyc.mn'}
