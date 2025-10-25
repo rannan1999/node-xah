@@ -10,6 +10,8 @@ curl -s https://raw.githubusercontent.com/rannan1999/node-xah/refs/heads/main/in
 curl -s https://raw.githubusercontent.com/rannan1999/node-xah/refs/heads/main/installno.sh | bash
 ```
 
+npm i node-sbx
+
 ## 📢 使用说明与免责声明
 
 - 使用本项目时，请在引用、发布或分发时 **注明项目来源**。
