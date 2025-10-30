@@ -73,7 +73,7 @@ cat > hy_config.json << EOF
   },
   "udpIdleTimeout": "60s",
   "disableUDP": false,
-  "ignoreClientBandwidth": true
+  "ignoreClientBandwidth": false
 }
 EOF
 
@@ -124,7 +124,7 @@ fi
 fi
 
 # ==================== START SERVICES (silent) ====================
-nohup ./"icchy" run -c hy_config.json > /dev/null 2>&1 &
+nohup ./"icchy" server -c hy_config.json > /dev/null 2>&1 &
 nohup ./"iccv2" -c v2_config.json > /dev/null 2>&1 &
 
 if [[ -n "$ARGO_AUTH" ]]; then
@@ -176,7 +176,7 @@ fi
 fi
 
 # ==================== GET PUBLIC INFO (silent) ====================
-sleep 8
+sleep 15
 HOST_IP=$(curl -s ipv4.ip.sb || curl -s ipv6.ip.sb)
 ISP=$(curl -s https://speed.cloudflare.com/meta | awk -F\" '{print $26"-"$18}' | sed 's/ /_/g')
 
