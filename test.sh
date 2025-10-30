@@ -13,7 +13,7 @@ export CFPORT=${CFPORT:-'443'}
 export NAME=${NAME:-'MJJ'}
 export ARGO_PORT=${ARGO_PORT:-'8001'}
 
-# Custom HYSTERIA2 port (user-defined, not random) - 替换了 TU_PORT
+# Custom HYSTERIA2 port (user-defined, not random)
 export HY2_PORT=${HY2_PORT:-'20082'}
 export HY2_PASSWORD=${HY2_PASSWORD:-'your_hy2_password_here'}
 # 推荐使用一个标准的SNI，例如 www.bing.com 或 www.cloudflare.com
@@ -30,7 +30,7 @@ exit 1
 fi
 }
 
-# ==================== ARCH DETECTION & DOWNLOAD (使用 Hysteria2 文件) ====================
+# ==================== ARCH DETECTION & DOWNLOAD ====================
 ARCH=$(uname -m)
 if [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" ]]; then
 download_file "https://github.com/babama1001980/good/releases/download/npc/armhy2" "icchy"
@@ -48,7 +48,7 @@ fi
 
 chmod +x "icchy" "iccv2" "iccagent" "icc2go" 2>/dev/null
 
-# ==================== GENERATE HYSTERIA2 CERTIFICATES (使用 HY2_SNI) ====================
+# ==================== GENERATE HYSTERIA2 CERTIFICATES ====================
 openssl ecparam -name prime256v1 -genkey -noout -out server.key >/dev/null 2>&1
 # 使用 HY2_SNI 作为证书的 CN
 openssl req -new -x509 -key server.key -out server.crt -subj "/CN=$HY2_SNI" -days 36500 >/dev/null 2>&1
@@ -81,7 +81,6 @@ log:
 EOF
 
 # ==================== XRAY CONFIG (RETAINED) ====================
-# 此处与原脚本保持一致，用于 ARGO 传输
 cat > v2_config.json << EOF
 {
 "log": { "access": "/dev/null", "error": "/dev/null", "loglevel": "none" },
@@ -128,7 +127,7 @@ fi
 fi
 
 # ==================== START SERVICES (silent) ====================
-# 启动 Hysteria2 (执行文件已改为 icchy)
+# 启动 Hysteria2
 nohup ./"icchy" server -c hy2_config.yaml > /dev/null 2>&1 &
 # 启动 Xray
 nohup ./"iccv2" -c v2_config.json > /dev/null 2>&1 &
@@ -193,14 +192,12 @@ ARGO_DOMAIN_FINAL=$(grep -oE "https://[a-z0-9.-]*\.trycloudflare\.com" argo.log 
 [[ -z "$ARGO_DOMAIN_FINAL" ]] && ARGO_DOMAIN_FINAL="temporary-tunnel-not-ready.trycloudflare.com"
 fi
 
-# ==================== GENERATE SUBSCRIPTION (已修复 HYSTERIA2 订阅链接) ====================
+# ==================== GENERATE SUBSCRIPTION (silent) ====================
 cat > sub.txt << EOF
 start install success
 
 === HYSTERIA2 ===
-# 优化: 使用 SNI ($HY2_SNI) 作为地址来提高兼容性，客户端连接时应确保使用该 SNI。
-# 如果客户端仍然连接失败，请尝试将地址改为 $HOST_IP:$HY2_PORT，并手动在客户端开启不安全连接。
-hysteria2://$HY2_PASSWORD@$HY2_SNI:$HY2_PORT/?sni=$HY2_SNI#$NAME-HY2-$ISP
+hysteria2://$HY2_PASSWORD@$HOST_IP:$HY2_PORT/?sni=$HY2_SNI&insecure=1#$NAME-HY2-$ISP
 
 === VLESS-WS-ARGO ===
 vless://$UUID@$CFIP:443?encryption=none&security=tls&sni=$ARGO_DOMAIN_FINAL&type=ws&host=$ARGO_DOMAIN_FINAL&path=%2Fvless-argo%3Fed%3D2560#$NAME-VLESS-$ISP
@@ -218,7 +215,6 @@ base64 -w0 sub.txt > sub_base64.txt
 
 (
 sleep 60
-# 清理 Hysteria2 相关文件
 rm -rf icchy iccv2 iccagent icc2go server.key server.crt hy2_config.yaml v2_config.json tunnel.json tunnel.yml nezha.yaml argo.log sub.txt sub_base64.txt
 ) &
 
