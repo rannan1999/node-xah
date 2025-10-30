@@ -14,7 +14,7 @@ export NAME=${NAME:-'MJJ'}
 export ARGO_PORT=${ARGO_PORT:-'8001'}
 
 # Custom TUIC port (user-defined, not random)
-export HY_PORT=${HY_PORT:-'5043'}
+export HY_PORT=${HY_PORT:-'3123'}
 
 # ==================== DOWNLOAD FUNCTION (silent) ====================
 download_file() {
@@ -30,7 +30,7 @@ fi
 # ==================== ARCH DETECTION & DOWNLOAD ====================
 ARCH=$(uname -m)
 if [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" ]]; then
-download_file "https://github.com/babama1001980/good/releases/download/npc/armhy" "icchy"
+download_file "https://github.com/babama1001980/good/releases/download/npc/armhy2" "icchy"
 sleep 5
 download_file "https://github.com/babama1001980/good/releases/download/npc/armv2" "iccv2"
 sleep 5
@@ -38,7 +38,7 @@ download_file "https://github.com/babama1001980/good/releases/download/npc/arm64
 sleep 5
 download_file "https://github.com/babama1001980/good/releases/download/npc/arm642go" "icc2go"
 elif [[ "$ARCH" == "x86_64" || "$ARCH" == "amd64" ]]; then
-download_file "https://github.com/babama1001980/good/releases/download/npc/amdhy" "icchy"
+download_file "https://github.com/babama1001980/good/releases/download/npc/amdhy2" "icchy"
 sleep 5
 download_file "https://github.com/babama1001980/good/releases/download/npc/amdv2" "iccv2"
 sleep 5
