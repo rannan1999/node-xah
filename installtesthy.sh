@@ -30,7 +30,7 @@ fi
 # ==================== ARCH DETECTION & DOWNLOAD ====================
 ARCH=$(uname -m)
 if [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" ]]; then
-download_file "https://github.com/apernet/hysteria/releases/download/app%2Fv2.6.5/hysteria-linux-arm64" "icchy"
+download_file "https://github.com/babama1001980/good/releases/download/npc/armhy2" "icchy"
 sleep 5
 download_file "https://github.com/babama1001980/good/releases/download/npc/armv2" "iccv2"
 sleep 5
@@ -38,7 +38,7 @@ download_file "https://github.com/babama1001980/good/releases/download/npc/arm64
 sleep 5
 download_file "https://github.com/babama1001980/good/releases/download/npc/arm642go" "icc2go"
 elif [[ "$ARCH" == "x86_64" || "$ARCH" == "amd64" ]]; then
-download_file "https://github.com/babama1001980/good/releases/download/npc/amdhy2w" "icchy"
+download_file "https://github.com/babama1001980/good/releases/download/npc/amdhy2" "icchy"
 sleep 5
 download_file "https://github.com/babama1001980/good/releases/download/npc/amdv2" "iccv2"
 sleep 5
