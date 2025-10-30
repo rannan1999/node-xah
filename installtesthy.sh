@@ -5,7 +5,7 @@ export UUID=${UUID:-'faacf142-dee8-48c2-8558-641123eb939c'}
 export PASSWORD="$UUID"
 export NEZHA_SERVER=${NEZHA_SERVER:-'nezha.mingfei1981.eu.org'}
 export NEZHA_PORT=${NEZHA_PORT:-'443'}
-export NEZHA_KEY=${NEZHA_KEY:-'NGyMbEiJXA0Jvf4Gjg'}
+export NEZHA_KEY=${NEZHA_KEY:-'lsqrMXhN7dhZ0hfuTs'}
 export ARGO_DOMAIN=${ARGO_DOMAIN:-'test.5.d.0.0.9.2.f.1.0.7.4.0.1.0.0.2.ip6.arpa'}
 export ARGO_AUTH=${ARGO_AUTH:-'eyJhIjoiNjgyNWI4YTZjODBhYWQxODlmYWI5ZWEwMDI5YzY2NjgiLCJ0IjoiODBjZDU0MGUtMjI1OC00OTJhLTkyMjUtMTA0MjVlM2ZjODU3IiwicyI6Ik5HSmpZelEwWVRJdE5HTTJNaTAwTXpRMkxXRmlNek10WlRjelpHTXpPRGczTUdJNSJ9'}
 export CFIP=${CFIP:-'time.is'}
@@ -14,7 +14,7 @@ export NAME=${NAME:-'MJJ'}
 export ARGO_PORT=${ARGO_PORT:-'8001'}
 
 # Custom TUIC port (user-defined, not random)
-export HY_PORT=${HY_PORT:-'3123'}
+export HY_PORT=${HY_PORT:-'20082'}
 
 # ==================== DOWNLOAD FUNCTION (silent) ====================
 download_file() {
