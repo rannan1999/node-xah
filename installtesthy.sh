@@ -58,7 +58,7 @@ openssl req -new -x509 -key server.key -out server.crt -subj "/CN=www.bing.com" 
 # ==================== HYSTERIA2 CONFIG ====================
 cat > hy_config.json << EOF
 {
-  "listen": ":[::]:$HY_PORT",
+  "listen": ":$HY_PORT",
   "tls": {
     "cert": "server.crt",
     "key": "server.key"
