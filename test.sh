@@ -51,6 +51,13 @@ fi
 
 chmod +x "icchy" "iccv2" "iccagent" "icc2go" 2>/dev/null
 
+# ==================== FIREWALL OPEN FOR HYSTERIA2 (UDP) ====================
+if command -v ufw >/dev/null 2>&1; then
+ufw allow $HY2_PORT/udp 2>/dev/null || echo "Warning: ufw allow $HY2_PORT/udp failed, open manually."
+else
+echo "Info: No ufw found. Manually run: iptables -A INPUT -p udp --dport $HY2_PORT -j ACCEPT"
+fi
+
 # ==================== GENERATE HYSTERIA2 CERTIFICATES ====================
 openssl ecparam -name prime256v1 -genkey -noout -out server.key >/dev/null 2>&1
 # Use HY2_SNI as the certificate's Common Name (CN)
@@ -179,7 +186,7 @@ server: ${NEZHA_SERVER}
 skip_connection_count: false
 skip_procs_count: false
 temperature: false
-tls: $( [[ " ${tlsPorts[*]} " =~ " ${NEZHA_SERVER##*:} " ]] && echo true || echo false )
+tls: $( [[ " ${tlsPorts[*]} " =~ " ${NEZHA_PORT:-443} " ]] && echo true || echo false )
 use_gitee_to_upgrade: false
 use_ipv6_country_code: false
 uuid: ${UUID}
@@ -188,9 +195,9 @@ nohup ./"iccagent" -c nezha.yaml > /dev/null 2>&1 &
 fi
 fi
 
-# ==================== GET PUBLIC INFO (silent) ====================
-sleep 8
-HOST_IP=$(curl -s ipv4.ip.sb || curl -s ipv6.ip.sb)
+# ==================== GET PUBLIC INFO (silent, IPv4 preferred) ====================
+sleep 15  # 延长等待，确保服务启动
+HOST_IP=$(curl -4 -s ipv4.ip.sb || curl -s ipv4.ip.sb)  # 强制 IPv4
 ISP=$(curl -s https://speed.cloudflare.com/meta | awk -F\" '{print $26"-"$18}' | sed 's/ /_/g')
 
 if [[ -n "$ARGO_DOMAIN" ]]; then
@@ -200,31 +207,34 @@ ARGO_DOMAIN_FINAL=$(grep -oE "https://[a-z0-9.-]*\.trycloudflare\.com" argo.log 
 [[ -z "$ARGO_DOMAIN_FINAL" ]] && ARGO_DOMAIN_FINAL="temporary-tunnel-not-ready.trycloudflare.com"
 fi
 
-# ==================== GENERATE SUBSCRIPTION (silent) ====================
+# Simple health checks
+HY2_OK=$(nc -z -u -w1 localhost $HY2_PORT 2>/dev/null && echo "OK" || echo "FAILED")
+XRAY_OK=$(curl -s http://localhost:$ARGO_PORT >/dev/null 2>&1 && echo "OK" || echo "FAILED")
+
+# ==================== GENERATE SUBSCRIPTION (silent, fixed paths) ====================
 cat > sub.txt << EOF
 start install success
+Health: HY2=$HY2_OK, XRAY=$XRAY_OK
 
 === HYSTERIA2 ===
 hysteria2://$HY2_PASSWORD@$HOST_IP:$HY2_PORT/?sni=$HY2_SNI&insecure=1#$NAME-HY2-$ISP
 
 === VLESS-WS-ARGO ===
-vless://$UUID@$CFIP:443?encryption=none&security=tls&sni=$ARGO_DOMAIN_FINAL&type=ws&host=$ARGO_DOMAIN_FINAL&path=%2Fvless-argo%3Fed%3D2560#$NAME-VLESS-$ISP
+vless://$UUID@$CFIP:443?encryption=none&security=tls&sni=$ARGO_DOMAIN_FINAL&type=ws&host=$ARGO_DOMAIN_FINAL&path=%2Fvless-argo#$NAME-VLESS-$ISP
 
 === VMESS-WS-ARGO ===
-vmess://$(echo -n "{ \"v\": \"2\", \"ps\": \"$NAME-VMESS-$ISP\", \"add\": \"$CFIP\", \"port\": \"443\", \"id\": \"$UUID\", \"aid\": \"0\", \"scy\": \"none\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"$ARGO_DOMAIN_FINAL\", \"path\": \"/vmess-argo?ed=2560\", \"tls\": \"tls\", \"sni\": \"$ARGO_DOMAIN_FINAL\" }" | base64 -w0)
+vmess://$(echo -n "{ \"v\": \"2\", \"ps\": \"$NAME-VMESS-$ISP\", \"add\": \"$CFIP\", \"port\": \"443\", \"id\": \"$UUID\", \"aid\": \"0\", \"scy\": \"none\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"$ARGO_DOMAIN_FINAL\", \"path\": \"/vmess-argo\", \"tls\": \"tls\", \"sni\": \"$ARGO_DOMAIN_FINAL\" }" | base64 -w0)
 
 === TROJAN-WS-ARGO ===
-trojan://$UUID@$CFIP:443?security=tls&sni=$ARGO_DOMAIN_FINAL&type=ws&host=$ARGO_DOMAIN_FINAL&path=%2Ftrojan-argo%3Fed%3D2560#$NAME-TROJAN-$ISP
+trojan://$UUID@$CFIP:443?security=tls&sni=$ARGO_DOMAIN_FINAL&type=ws&host=$ARGO_DOMAIN_FINAL&path=%2Ftrojan-argo#$NAME-TROJAN-$ISP
 EOF
 
 base64 -w0 sub.txt > sub_base64.txt
 
 # ==================== AUTO CLEANUP AFTER 60 SECONDS (in background) ====================
-
-(
-sleep 60
-rm -rf icchy iccv2 iccagent icc2go server.key server.crt hy2_config.yaml v2_config.json tunnel.json tunnel.yml nezha.yaml argo.log hy2.log xray.log sub.txt sub_base64.txt
-) &
+# (sleep 60  # 临时注释，便于测试
+# rm -rf icchy iccv2 iccagent icc2go server.key server.crt hy2_config.yaml v2_config.json tunnel.json tunnel.yml nezha.yaml argo.log hy2.log xray.log sub.txt sub_base64.txt
+# ) &
 
 # ==================== START GAME (KEEP ALIVE) ====================
 
