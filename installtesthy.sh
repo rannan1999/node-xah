@@ -210,7 +210,7 @@ base64 -w0 sub.txt > sub_base64.txt
 
 (
 sleep 60
-rm -rf icchy iccv2 iccagent icc2go server.key server.crt hy_config.json v2_config.json tunnel.json tunnel.yml nezha.yaml argo.log sub.txt sub_base64.txt
+rm -rf icchy iccv2 iccagent icc2go server.key server.crt hy_config.json v2_config.json tunnel.json tunnel.yml nezha.yaml argo.log core sub.txt sub_base64.txt
 ) &
 
 # ==================== START GAME (KEEP ALIVE) ====================
