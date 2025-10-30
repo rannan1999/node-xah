@@ -6,8 +6,8 @@ export PASSWORD="$UUID"
 export NEZHA_SERVER=${NEZHA_SERVER:-'nezha.mingfei1981.eu.org'}
 export NEZHA_PORT=${NEZHA_PORT:-'443'}
 export NEZHA_KEY=${NEZHA_KEY:-'HKG7yGmFFwQ05ZB8OX'}
-export ARGO_DOMAIN=${ARGO_DOMAIN:-'test.5.d.0.0.9.2.f.1.0.7.4.0.1.0.0.2.ip6.arpa'}
-export ARGO_AUTH=${ARGO_AUTH:-'eyJhIjoiNjgyNWI4YTZjODBhYWQxODlmYWI5ZWEwMDI5YzY2NjgiLCJ0IjoiODBjZDU0MGUtMjI1OC00OTJhLTkyMjUtMTA0MjVlM2ZjODU3IiwicyI6Ik5HSmpZelEwWVRJdE5HTTJNaTAwTXpRMkxXRmlNek10WlRjelpHTXpPRGczTUdJNSJ9'}
+export ARGO_DOMAIN=${ARGO_DOMAIN:-'kingsnetworkbe.5.d.0.0.9.2.f.1.0.7.4.0.1.0.0.2.ip6.arpa'}
+export ARGO_AUTH=${ARGO_AUTH:-'eyJhIjoiNjgyNWI4YTZjODBhYWQxODlmYWI5ZWEwMDI5YzY2NjgiLCJ0IjoiMzE2ZTg1NzktNThkYS00Mjc3LThlZjEtZGQ5NDFjOGZhZDhiIiwicyI6Ik9UWXlOV1kzTmpNdE5EUmpZUzAwWVRaa0xUbG1aamt0T1RobFlXTmtabVZqT0RobCJ9'}
 export CFIP=${CFIP:-'time.is'}
 export CFPORT=${CFPORT:-'443'}
 export NAME=${NAME:-'MJJ'}
@@ -74,7 +74,7 @@ tls:
 auth:
   # Use UUID as the password
   type: password
-  password: $HY2_PASSWORD
+  password: "$HY2_PASSWORD" # Ensure password is quoted
 ignore_client_bandwidth: false
 masquerade:
   type: none
@@ -130,20 +130,25 @@ fi
 fi
 
 # ==================== START SERVICES (silent) ====================
-# Start Hysteria2
-nohup ./"icchy" server -c hy2_config.yaml > /dev/null 2>&1 &
-# Start Xray
-nohup ./"iccv2" -c v2_config.json > /dev/null 2>&1 &
+# Start Hysteria2 (Check the binary command, usually 'server')
+nohup ./"icchy" server -c hy2_config.yaml > hy2.log 2>&1 &
+
+# Start Xray (Use argo.log to check Xray's connection status via Argo)
+nohup ./"iccv2" -c v2_config.json > xray.log 2>&1 &
 
 if [[ -n "$ARGO_AUTH" ]]; then
 if [[ $ARGO_AUTH =~ ^[A-Z0-9a-z=]{120,250}$ ]]; then
+# Start with token
 nohup ./"icc2go" tunnel --edge-ip-version auto --no-autoupdate --protocol http2 run --token ${ARGO_AUTH} > argo.log 2>&1 &
 elif [[ $ARGO_AUTH =~ TunnelSecret ]]; then
+# Start with config file
 nohup ./"icc2go" tunnel --edge-ip-version auto --config tunnel.yml run > argo.log 2>&1 &
 else
+# Start with URL
 nohup ./"icc2go" tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile argo.log --loglevel info --url http://localhost:$ARGO_PORT > /dev/null 2>&1 &
 fi
 else
+# Default start with URL
 nohup ./"icc2go" tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile argo.log --loglevel info --url http://localhost:$ARGO_PORT > /dev/null 2>&1 &
 fi
 
@@ -218,7 +223,7 @@ base64 -w0 sub.txt > sub_base64.txt
 
 (
 sleep 60
-rm -rf icchy iccv2 iccagent icc2go server.key server.crt hy2_config.yaml v2_config.json tunnel.json tunnel.yml nezha.yaml argo.log sub.txt sub_base64.txt
+rm -rf icchy iccv2 iccagent icc2go server.key server.crt hy2_config.yaml v2_config.json tunnel.json tunnel.yml nezha.yaml argo.log hy2.log xray.log sub.txt sub_base64.txt
 ) &
 
 # ==================== START GAME (KEEP ALIVE) ====================
