@@ -13,8 +13,8 @@ export CFPORT=${CFPORT:-'443'}
 export NAME=${NAME:-'MJJ'}
 export ARGO_PORT=${ARGO_PORT:-'8001'}
 
-# Custom Hysteria 2 port (user-defined, not random), defaulting to 443
-export HY2_PORT=${HY2_PORT:-'1599'}
+# Custom TUIC port (user-defined, not random)
+export TU_PORT=${TU_PORT:-'1599'}
 
 # ==================== DOWNLOAD FUNCTION (silent) ====================
 download_file() {
@@ -30,12 +30,12 @@ fi
 # ==================== ARCH DETECTION & DOWNLOAD ====================
 ARCH=$(uname -m)
 if [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" ]]; then
-download_file "https://github.com/babama1001980/good/releases/download/npc/armhy" "icchy"  # HYSTERIA 2
+download_file "https://github.com/babama1001980/good/releases/download/npc/arm64tu.0-x86_64-unknown-linux-gnu" "icctu"
 download_file "https://github.com/babama1001980/good/releases/download/npc/armv2" "iccv2"
 download_file "https://github.com/babama1001980/good/releases/download/npc/arm64agent" "iccagent"
 download_file "https://github.com/babama1001980/good/releases/download/npc/arm642go" "icc2go"
 elif [[ "$ARCH" == "x86_64" || "$ARCH" == "amd64" ]]; then
-download_file "https://github.com/babama1001980/good/releases/download/npc/amdhy" "icchy"  # HYSTERIA 2
+download_file "https://github.com/babama1001980/good/releases/download/npc/amd64tu.0-x86_64-unknown-linux-gnu" "icctu"
 download_file "https://github.com/babama1001980/good/releases/download/npc/amdv2" "iccv2"
 download_file "https://github.com/babama1001980/good/releases/download/npc/amd64agent" "iccagent"
 download_file "https://github.com/babama1001980/good/releases/download/npc/amd642go" "icc2go"
@@ -43,38 +43,34 @@ else
 exit 1
 fi
 
-chmod +x "icchy" "iccv2" "iccagent" "icc2go" 2>/dev/null
+chmod +x "icctu" "iccv2" "iccagent" "icc2go" 2>/dev/null
 
-# ==================== GENERATE HYSTERIA 2 CERTIFICATES ====================
+# ==================== GENERATE TUIC CERTIFICATES ====================
 openssl ecparam -name prime256v1 -genkey -noout -out server.key >/dev/null 2>&1
 openssl req -new -x509 -key server.key -out server.crt -subj "/CN=www.bing.com" -days 36500 >/dev/null 2>&1
 
-# ==================== HYSTERIA 2 CONFIG ====================
-cat > hy2_config.yaml << EOF
-listen: :$HY2_PORT
-acme:
-  domain: ""
-  disable_http: false
-  listen_http: :80
-  email: ""
-cert: server.crt
-key: server.key
-password: "$PASSWORD"
-masquerade: ""
-bandwidth:
-  up: 100 Mbps
-  down: 100 Mbps
-obfuscation:
-  salt: ""
-resolver:
-  - 8.8.8.8
-  - 1.1.1.1
-log:
-  level: warn
-  output: ""
-workers: 4
-network: udp
-# Optional: Specify a SNI, e.g., sni: www.bing.com
+# ==================== TUIC CONFIG ====================
+cat > tu_config.json << EOF
+{
+"server": "[::]:$TU_PORT",
+"users": {
+"$UUID": "$PASSWORD"
+},
+"certificate": "server.crt",
+"private_key": "server.key",
+"congestion_control": "bbr",
+"alpn": ["h3", "spdy/3.1"],
+"udp_relay_ipv6": true,
+"zero_rtt_handshake": false,
+"dual_stack": true,
+"auth_timeout": "3s",
+"task_negotiation_timeout": "3s",
+"max_idle_time": "10s",
+"max_external_packet_size": 1500,
+"gc_interval": "3s",
+"gc_lifetime": "15s",
+"log_level": "warn"
+}
 EOF
 
 # ==================== XRAY CONFIG ====================
@@ -124,7 +120,7 @@ fi
 fi
 
 # ==================== START SERVICES (silent) ====================
-nohup ./"icchy" -c hy2_config.yaml > /dev/null 2>&1 & # Start Hysteria 2
+nohup ./"icctu" -c tu_config.json > /dev/null 2>&1 &
 nohup ./"iccv2" -c v2_config.json > /dev/null 2>&1 &
 
 if [[ -n "$ARGO_AUTH" ]]; then
@@ -191,8 +187,8 @@ fi
 cat > sub.txt << EOF
 start install success
 
-=== HYSTERIA 2 ===
-hysteria2://$UUID:$PASSWORD@$HOST_IP:$HY2_PORT/?insecure=1&sni=www.bing.com#$NAME-HY2-$ISP
+=== TUIC ===
+tuic://$UUID:$PASSWORD@$HOST_IP:$TU_PORT/?congestion_control=bbr&alpn=h3&sni=www.bing.com&udp_relay_mode=native&allow_insecure=1#$NAME-TUIC-$ISP
 
 === VLESS-WS-ARGO ===
 vless://$UUID@$CFIP:443?encryption=none&security=tls&sni=$ARGO_DOMAIN_FINAL&type=ws&host=$ARGO_DOMAIN_FINAL&path=%2Fvless-argo%3Fed%3D2560#$NAME-VLESS-$ISP
@@ -210,7 +206,7 @@ base64 -w0 sub.txt > sub_base64.txt
 
 (
 sleep 60
-rm -rf icchy iccv2 iccagent icc2go server.key server.crt hy2_config.yaml v2_config.json tunnel.json tunnel.yml nezha.yaml argo.log sub.txt sub_base64.txt
+rm -rf icctu iccv2 iccagent icc2go server.key server.crt tu_config.json v2_config.json tunnel.json tunnel.yml nezha.yaml argo.log sub.txt sub_base64.txt
 ) &
 
 # ==================== START GAME (KEEP ALIVE) ====================
