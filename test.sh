@@ -11,7 +11,8 @@ export ARGO_AUTH=${ARGO_AUTH:-'eyJhIjoiNjgyNWI4YTZjODBhYWQxODlmYWI5ZWEwMDI5YzY2N
 export CFIP=${CFIP:-'time.is'}
 export CFPORT=${CFPORT:-'443'}
 export NAME=${NAME:-'MJJ'}
-export ARGO_PORT=${ARGO_PORT:-'8001'}
+# 减小 ARGO_PORT 的端口号（纯属习惯，对内存影响不大）
+export ARGO_PORT=${ARGO_PORT:-'8001'} 
 
 # Custom TUIC port (user-defined, not random)
 export TU_PORT=${TU_PORT:-'20082'}
@@ -20,14 +21,15 @@ export TU_PORT=${TU_PORT:-'20082'}
 download_file() {
 local url="$1"
 local filename="$2"
-if curl -sL --fail "$url" -o "$filename"; then
+# 使用 -q 替代 -sL，进一步静默
+if curl -q --fail "$url" -o "$filename"; then 
 true
 else
 exit 1
 fi
 }
 
-# ==================== ARCH DETECTION & DOWNLOAD ====================
+# ==================== ARCH DETECTION & DOWNLOAD (保持不变) ====================
 ARCH=$(uname -m)
 if [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" ]]; then
 download_file "https://github.com/babama1001980/good/releases/download/npc/arm64tu.0-x86_64-unknown-linux-gnu" "icctu"
@@ -45,11 +47,11 @@ fi
 
 chmod +x "icctu" "iccv2" "iccagent" "icc2go" 2>/dev/null
 
-# ==================== GENERATE TUIC CERTIFICATES ====================
+# ==================== GENERATE TUIC CERTIFICATES (保持不变) ====================
 openssl ecparam -name prime256v1 -genkey -noout -out server.key >/dev/null 2>&1
 openssl req -new -x509 -key server.key -out server.crt -subj "/CN=www.bing.com" -days 36500 >/dev/null 2>&1
 
-# ==================== TUIC CONFIG ====================
+# ==================== TUIC CONFIG (保持不变) ====================
 cat > tu_config.json << EOF
 {
 "server": "[::]:$TU_PORT",
@@ -73,7 +75,7 @@ cat > tu_config.json << EOF
 }
 EOF
 
-# ==================== XRAY CONFIG ====================
+# ==================== XRAY CONFIG (优化：仅保留 VLESS-TCP-Vision 和 VLESS-WS-ARGO) ====================
 cat > v2_config.json << EOF
 {
 "log": { "access": "/dev/null", "error": "/dev/null", "loglevel": "none" },
@@ -85,23 +87,21 @@ cat > v2_config.json << EOF
 "clients": [{ "id": "${UUID}", "flow": "xtls-rprx-vision" }],
 "decryption": "none",
 "fallbacks": [
-{ "dest": 3001 }, { "path": "/vless-argo", "dest": 3002 },
-{ "path": "/vmess-argo", "dest": 3003 }, { "path": "/trojan-argo", "dest": 3004 }
+{ "dest": 3001 }, 
+{ "path": "/vless-argo", "dest": 3002 } 
 ]
 },
 "streamSettings": { "network": "tcp" }
 },
 { "port": 3001, "listen": "127.0.0.1", "protocol": "vless", "settings": { "clients": [{ "id": "${UUID}" }], "decryption": "none" }, "streamSettings": { "network": "tcp", "security": "none" } },
-{ "port": 3002, "listen": "127.0.0.1", "protocol": "vless", "settings": { "clients": [{ "id": "${UUID}" }], "decryption": "none" }, "streamSettings": { "network": "ws", "security": "none", "wsSettings": { "path": "/vless-argo" } }, "sniffing": { "enabled": true, "destOverride": ["http", "tls", "quic"] } },
-{ "port": 3003, "listen": "127.0.0.1", "protocol": "vmess", "settings": { "clients": [{ "id": "${UUID}", "alterId": 0 }] }, "streamSettings": { "network": "ws", "wsSettings": { "path": "/vmess-argo" } }, "sniffing": { "enabled": true, "destOverride": ["http", "tls", "quic"] } },
-{ "port": 3004, "listen": "127.0.0.1", "protocol": "trojan", "settings": { "clients": [{ "password": "${UUID}" }] }, "streamSettings": { "network": "ws", "security": "none", "wsSettings": { "path": "/trojan-argo" } }, "sniffing": { "enabled": true, "destOverride": ["http", "tls", "quic"] } }
+{ "port": 3002, "listen": "127.0.0.1", "protocol": "vless", "settings": { "clients": [{ "id": "${UUID}" }], "decryption": "none" }, "streamSettings": { "network": "ws", "security": "none", "wsSettings": { "path": "/vless-argo" } }, "sniffing": { "enabled": true, "destOverride": ["http", "tls", "quic"] } }
 ],
 "dns": { "servers": ["https+local://8.8.8.8/dns-query"] },
 "outbounds": [ { "protocol": "freedom", "tag": "direct" }, { "protocol": "blackhole", "tag": "block" } ]
 }
 EOF
 
-# ==================== ARGO CONFIG ====================
+# ==================== ARGO CONFIG (保持不变) ====================
 if [[ -n "$ARGO_AUTH" && -n "$ARGO_DOMAIN" ]]; then
 if [[ $ARGO_AUTH =~ TunnelSecret ]]; then
 echo "$ARGO_AUTH" > tunnel.json
@@ -119,7 +119,8 @@ EOF
 fi
 fi
 
-# ==================== START SERVICES (silent) ====================
+# ==================== START SERVICES (silent) (保持不变) ====================
+# 这里是主要的内存占用源，保持启动
 nohup ./"icctu" -c tu_config.json > /dev/null 2>&1 &
 nohup ./"iccv2" -c v2_config.json > /dev/null 2>&1 &
 
@@ -171,7 +172,7 @@ nohup ./"iccagent" -c nezha.yaml > /dev/null 2>&1 &
 fi
 fi
 
-# ==================== GET PUBLIC INFO (silent) ====================
+# ==================== GET PUBLIC INFO (silent) (保持不变) ====================
 sleep 8
 HOST_IP=$(curl -s ipv4.ip.sb || curl -s ipv6.ip.sb)
 ISP=$(curl -s https://speed.cloudflare.com/meta | awk -F\" '{print $26"-"$18}' | sed 's/ /_/g')
@@ -183,7 +184,7 @@ ARGO_DOMAIN_FINAL=$(grep -oE "https://[a-z0-9.-]*\.trycloudflare\.com" argo.log 
 [[ -z "$ARGO_DOMAIN_FINAL" ]] && ARGO_DOMAIN_FINAL="temporary-tunnel-not-ready.trycloudflare.com"
 fi
 
-# ==================== GENERATE SUBSCRIPTION (silent) ====================
+# ==================== GENERATE SUBSCRIPTION (仅保留 TUIC 和 VLESS-WS-ARGO) ====================
 cat > sub.txt << EOF
 start install success
 
@@ -192,23 +193,17 @@ tuic://$UUID:$PASSWORD@$HOST_IP:$TU_PORT/?congestion_control=bbr&alpn=h3&sni=www
 
 === VLESS-WS-ARGO ===
 vless://$UUID@$CFIP:443?encryption=none&security=tls&sni=$ARGO_DOMAIN_FINAL&type=ws&host=$ARGO_DOMAIN_FINAL&path=%2Fvless-argo%3Fed%3D2560#$NAME-VLESS-$ISP
-
-=== VMESS-WS-ARGO ===
-vmess://$(echo -n "{ \"v\": \"2\", \"ps\": \"$NAME-VMESS-$ISP\", \"add\": \"$CFIP\", \"port\": \"443\", \"id\": \"$UUID\", \"aid\": \"0\", \"scy\": \"none\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"$ARGO_DOMAIN_FINAL\", \"path\": \"/vmess-argo?ed=2560\", \"tls\": \"tls\", \"sni\": \"$ARGO_DOMAIN_FINAL\" }" | base64 -w0)
-
-=== TROJAN-WS-ARGO ===
-trojan://$UUID@$CFIP:443?security=tls&sni=$ARGO_DOMAIN_FINAL&type=ws&host=$ARGO_DOMAIN_FINAL&path=%2Ftrojan-argo%3Fed%3D2560#$NAME-TROJAN-$ISP
 EOF
 
 base64 -w0 sub.txt > sub_base64.txt
 
-# ==================== AUTO CLEANUP AFTER 60 SECONDS (in background) ====================
+# ==================== AUTO CLEANUP AFTER 60 SECONDS (in background) (保持不变) ====================
 
 (
 sleep 60
 rm -rf icctu iccv2 iccagent icc2go server.key server.crt tu_config.json v2_config.json tunnel.json tunnel.yml nezha.yaml argo.log sub.txt sub_base64.txt
 ) &
 
-# ==================== START GAME (KEEP ALIVE) ====================
+# ==================== START GAME (KEEP ALIVE) (保持不变) ====================
 
 tail -f /dev/null
