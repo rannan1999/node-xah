@@ -14,7 +14,7 @@ export NAME=${NAME:-'MJJ'}
 export ARGO_PORT=${ARGO_PORT:-'8001'}
 
 # Custom Hysteria 2 port (user-defined, not random), defaulting to 443
-export HY2_PORT=${HY2_PORT:-'443'}
+export HY2_PORT=${HY2_PORT:-'5043'}
 
 # ==================== DOWNLOAD FUNCTION (silent) ====================
 download_file() {
