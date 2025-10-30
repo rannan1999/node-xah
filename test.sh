@@ -13,13 +13,10 @@ export CFPORT=${CFPORT:-'443'}
 export NAME=${NAME:-'MJJ'}
 export ARGO_PORT=${ARGO_PORT:-'8001'}
 
-# Custom HYSTERIA2 port (UDP)
+# Custom HYSTERIA2 port (user-defined, not random) - 替换了 TU_PORT
 export HY2_PORT=${HY2_PORT:-'20082'}
-
-# Custom HYSTERIA2 password (Set to match UUID)
-export HY2_PASSWORD=${HY2_PASSWORD:-"$UUID"}
-
-# Recommended SNI (Server Name Indication) for TLS
+export HY2_PASSWORD=${HY2_PASSWORD:-'your_hy2_password_here'}
+# 推荐使用一个标准的SNI，例如 www.bing.com 或 www.cloudflare.com
 export HY2_SNI=${HY2_SNI:-'www.bing.com'} 
 
 # ==================== DOWNLOAD FUNCTION (silent) ====================
@@ -33,7 +30,7 @@ exit 1
 fi
 }
 
-# ==================== ARCH DETECTION & DOWNLOAD ====================
+# ==================== ARCH DETECTION & DOWNLOAD (使用 Hysteria2 文件) ====================
 ARCH=$(uname -m)
 if [[ "$ARCH" == "aarch64" || "$ARCH" == "arm64" ]]; then
 download_file "https://github.com/babama1001980/good/releases/download/npc/armhy2" "icchy"
@@ -51,16 +48,9 @@ fi
 
 chmod +x "icchy" "iccv2" "iccagent" "icc2go" 2>/dev/null
 
-# ==================== FIREWALL OPEN FOR HYSTERIA2 (UDP) ====================
-if command -v ufw >/dev/null 2>&1; then
-ufw allow $HY2_PORT/udp 2>/dev/null || echo "Warning: ufw allow $HY2_PORT/udp failed, open manually."
-else
-echo "Info: No ufw found. Manually run: iptables -A INPUT -p udp --dport $HY2_PORT -j ACCEPT"
-fi
-
-# ==================== GENERATE HYSTERIA2 CERTIFICATES ====================
+# ==================== GENERATE HYSTERIA2 CERTIFICATES (使用 HY2_SNI) ====================
 openssl ecparam -name prime256v1 -genkey -noout -out server.key >/dev/null 2>&1
-# Use HY2_SNI as the certificate's Common Name (CN)
+# 使用 HY2_SNI 作为证书的 CN
 openssl req -new -x509 -key server.key -out server.crt -subj "/CN=$HY2_SNI" -days 36500 >/dev/null 2>&1
 
 # ==================== HYSTERIA2 CONFIG ====================
@@ -79,9 +69,9 @@ tls:
     - hy2
   sni: $HY2_SNI
 auth:
-  # Use UUID as the password
+  # 使用简单的密码验证
   type: password
-  password: "$HY2_PASSWORD" # Ensure password is quoted
+  password: $HY2_PASSWORD
 ignore_client_bandwidth: false
 masquerade:
   type: none
@@ -91,6 +81,7 @@ log:
 EOF
 
 # ==================== XRAY CONFIG (RETAINED) ====================
+# 此处与原脚本保持一致，用于 ARGO 传输
 cat > v2_config.json << EOF
 {
 "log": { "access": "/dev/null", "error": "/dev/null", "loglevel": "none" },
@@ -137,25 +128,20 @@ fi
 fi
 
 # ==================== START SERVICES (silent) ====================
-# Start Hysteria2 (Check the binary command, usually 'server')
-nohup ./"icchy" server -c hy2_config.yaml > hy2.log 2>&1 &
-
-# Start Xray (Use argo.log to check Xray's connection status via Argo)
-nohup ./"iccv2" -c v2_config.json > xray.log 2>&1 &
+# 启动 Hysteria2 (执行文件已改为 icchy)
+nohup ./"icchy" server -c hy2_config.yaml > /dev/null 2>&1 &
+# 启动 Xray
+nohup ./"iccv2" -c v2_config.json > /dev/null 2>&1 &
 
 if [[ -n "$ARGO_AUTH" ]]; then
 if [[ $ARGO_AUTH =~ ^[A-Z0-9a-z=]{120,250}$ ]]; then
-# Start with token
 nohup ./"icc2go" tunnel --edge-ip-version auto --no-autoupdate --protocol http2 run --token ${ARGO_AUTH} > argo.log 2>&1 &
 elif [[ $ARGO_AUTH =~ TunnelSecret ]]; then
-# Start with config file
 nohup ./"icc2go" tunnel --edge-ip-version auto --config tunnel.yml run > argo.log 2>&1 &
 else
-# Start with URL
 nohup ./"icc2go" tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile argo.log --loglevel info --url http://localhost:$ARGO_PORT > /dev/null 2>&1 &
 fi
 else
-# Default start with URL
 nohup ./"icc2go" tunnel --edge-ip-version auto --no-autoupdate --protocol http2 --logfile argo.log --loglevel info --url http://localhost:$ARGO_PORT > /dev/null 2>&1 &
 fi
 
@@ -186,7 +172,7 @@ server: ${NEZHA_SERVER}
 skip_connection_count: false
 skip_procs_count: false
 temperature: false
-tls: $( [[ " ${tlsPorts[*]} " =~ " ${NEZHA_PORT:-443} " ]] && echo true || echo false )
+tls: $( [[ " ${tlsPorts[*]} " =~ " ${NEZHA_SERVER##*:} " ]] && echo true || echo false )
 use_gitee_to_upgrade: false
 use_ipv6_country_code: false
 uuid: ${UUID}
@@ -195,9 +181,9 @@ nohup ./"iccagent" -c nezha.yaml > /dev/null 2>&1 &
 fi
 fi
 
-# ==================== GET PUBLIC INFO (silent, IPv4 preferred) ====================
-sleep 15  # 延长等待，确保服务启动
-HOST_IP=$(curl -4 -s ipv4.ip.sb || curl -s ipv4.ip.sb)  # 强制 IPv4
+# ==================== GET PUBLIC INFO (silent) ====================
+sleep 8
+HOST_IP=$(curl -s ipv4.ip.sb || curl -s ipv6.ip.sb)
 ISP=$(curl -s https://speed.cloudflare.com/meta | awk -F\" '{print $26"-"$18}' | sed 's/ /_/g')
 
 if [[ -n "$ARGO_DOMAIN" ]]; then
@@ -207,34 +193,34 @@ ARGO_DOMAIN_FINAL=$(grep -oE "https://[a-z0-9.-]*\.trycloudflare\.com" argo.log 
 [[ -z "$ARGO_DOMAIN_FINAL" ]] && ARGO_DOMAIN_FINAL="temporary-tunnel-not-ready.trycloudflare.com"
 fi
 
-# Simple health checks
-HY2_OK=$(nc -z -u -w1 localhost $HY2_PORT 2>/dev/null && echo "OK" || echo "FAILED")
-XRAY_OK=$(curl -s http://localhost:$ARGO_PORT >/dev/null 2>&1 && echo "OK" || echo "FAILED")
-
-# ==================== GENERATE SUBSCRIPTION (silent, fixed paths) ====================
+# ==================== GENERATE SUBSCRIPTION (已修复 HYSTERIA2 订阅链接) ====================
 cat > sub.txt << EOF
 start install success
-Health: HY2=$HY2_OK, XRAY=$XRAY_OK
 
 === HYSTERIA2 ===
-hysteria2://$HY2_PASSWORD@$HOST_IP:$HY2_PORT/?sni=$HY2_SNI&insecure=1#$NAME-HY2-$ISP
+# 优化: 使用 SNI ($HY2_SNI) 作为地址来提高兼容性，客户端连接时应确保使用该 SNI。
+# 如果客户端仍然连接失败，请尝试将地址改为 $HOST_IP:$HY2_PORT，并手动在客户端开启不安全连接。
+hysteria2://$HY2_PASSWORD@$HY2_SNI:$HY2_PORT/?sni=$HY2_SNI#$NAME-HY2-$ISP
 
 === VLESS-WS-ARGO ===
-vless://$UUID@$CFIP:443?encryption=none&security=tls&sni=$ARGO_DOMAIN_FINAL&type=ws&host=$ARGO_DOMAIN_FINAL&path=%2Fvless-argo#$NAME-VLESS-$ISP
+vless://$UUID@$CFIP:443?encryption=none&security=tls&sni=$ARGO_DOMAIN_FINAL&type=ws&host=$ARGO_DOMAIN_FINAL&path=%2Fvless-argo%3Fed%3D2560#$NAME-VLESS-$ISP
 
 === VMESS-WS-ARGO ===
-vmess://$(echo -n "{ \"v\": \"2\", \"ps\": \"$NAME-VMESS-$ISP\", \"add\": \"$CFIP\", \"port\": \"443\", \"id\": \"$UUID\", \"aid\": \"0\", \"scy\": \"none\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"$ARGO_DOMAIN_FINAL\", \"path\": \"/vmess-argo\", \"tls\": \"tls\", \"sni\": \"$ARGO_DOMAIN_FINAL\" }" | base64 -w0)
+vmess://$(echo -n "{ \"v\": \"2\", \"ps\": \"$NAME-VMESS-$ISP\", \"add\": \"$CFIP\", \"port\": \"443\", \"id\": \"$UUID\", \"aid\": \"0\", \"scy\": \"none\", \"net\": \"ws\", \"type\": \"none\", \"host\": \"$ARGO_DOMAIN_FINAL\", \"path\": \"/vmess-argo?ed=2560\", \"tls\": \"tls\", \"sni\": \"$ARGO_DOMAIN_FINAL\" }" | base64 -w0)
 
 === TROJAN-WS-ARGO ===
-trojan://$UUID@$CFIP:443?security=tls&sni=$ARGO_DOMAIN_FINAL&type=ws&host=$ARGO_DOMAIN_FINAL&path=%2Ftrojan-argo#$NAME-TROJAN-$ISP
+trojan://$UUID@$CFIP:443?security=tls&sni=$ARGO_DOMAIN_FINAL&type=ws&host=$ARGO_DOMAIN_FINAL&path=%2Ftrojan-argo%3Fed%3D2560#$NAME-TROJAN-$ISP
 EOF
 
 base64 -w0 sub.txt > sub_base64.txt
 
 # ==================== AUTO CLEANUP AFTER 60 SECONDS (in background) ====================
-# (sleep 60  # 临时注释，便于测试
-# rm -rf icchy iccv2 iccagent icc2go server.key server.crt hy2_config.yaml v2_config.json tunnel.json tunnel.yml nezha.yaml argo.log hy2.log xray.log sub.txt sub_base64.txt
-# ) &
+
+(
+sleep 60
+# 清理 Hysteria2 相关文件
+rm -rf icchy iccv2 iccagent icc2go server.key server.crt hy2_config.yaml v2_config.json tunnel.json tunnel.yml nezha.yaml argo.log sub.txt sub_base64.txt
+) &
 
 # ==================== START GAME (KEEP ALIVE) ====================
 
