@@ -64,10 +64,8 @@ cat > hy_config.json << EOF
     "key": "server.key"
   },
   "auth": {
-    "type": "userpass",
-    "userpass": {
-      "$UUID": "$PASSWORD"
-    }
+    "type": "password",
+    "password": "$PASSWORD"
   },
   "quic": {
     "maxIdleTimeout": "30s",
@@ -194,7 +192,7 @@ cat > sub.txt << EOF
 start install success
 
 === HY2 ===
-hysteria2://$UUID:$PASSWORD@$HOST_IP:$HY_PORT/?insecure=1&sni=www.bing.com#$NAME-HY-$ISP
+hysteria2://$PASSWORD@$HOST_IP:$HY_PORT/?insecure=1&sni=www.bing.com#$NAME-HY-$ISP
 
 === VLESS-WS-ARGO ===
 vless://$UUID@$CFIP:443?encryption=none&security=tls&sni=$ARGO_DOMAIN_FINAL&type=ws&host=$ARGO_DOMAIN_FINAL&path=%2Fvless-argo%3Fed%3D2560#$NAME-VLESS-$ISP
